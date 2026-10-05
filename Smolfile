@@ -1,0 +1,22 @@
+# smol-tapes: tapes + Postgres inside a smolvm microVM, draining to the host.
+image = "./build/smol-tapes.tar"   # `docker save` archive built by demo.sh
+net = true
+cpus = 2
+memory = 2048
+
+# Pull path 1: the tapes read API, reachable on the host at :18081 while the VM runs.
+ports = ["18081:8081"]
+
+# Pull path 2 (the drain): guest-local copy of ./out. smolvm copies it back to
+# the host on `machine sync` and on every graceful stop, including stop_on_exit.
+volumes = ["./out:/var/tapes/out:staged"]
+
+env = ["DEMO_HOLD_SECONDS=300", "TAPES_PROVIDER=anthropic", "TAPES_UPSTREAM=https://api.anthropic.com"]
+
+# When the workload exits, flush storage, sync the staged mount, power off.
+# (Top-level keys must come before any [table] in TOML.)
+stop_on_exit = true
+
+# Egress allowlist: only the LLM upstream. Postgres and tapes are loopback-only.
+[network]
+allow_hosts = ["api.anthropic.com"]
